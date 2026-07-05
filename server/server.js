@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const connectDB = require("./config/db");
 const taskRoutes = require("./routes/tasks");
+const authRoutes = require("./routes/auth");
 
 const app = express();
 
@@ -17,6 +18,9 @@ app.use(express.json());
 app.get("/", (req, res) => {
   res.json({ message: "API DevTask opérationnelle 🚀" });
 });
+
+// Routes d'authentification
+app.use("/api/auth", authRoutes);
 
 // Routes des tâches
 app.use("/api/tasks", taskRoutes);

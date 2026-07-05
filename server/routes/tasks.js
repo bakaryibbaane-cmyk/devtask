@@ -1,18 +1,22 @@
 const express = require("express");
 const router = express.Router();
 const Task = require("../models/Task");
+const authMiddleware = require("../middleware/auth");
 
-// GET /api/tasks -> récupère toutes les tâches
+// Toutes les routes ci-dessous sont protégées par le middleware
+router.use(authMiddleware);
+
+// GET /api/tasks -> récupère uniquement les tâches de l'utilisateur connecté
 router.get("/", async (req, res) => {
   try {
-    const tasks = await Task.find().sort({ createdAt: -1 });
+    const tasks = await Task.find({ userId: req.userId }).sort({ createdAt: -1 });
     res.json(tasks);
   } catch (error) {
     res.status(500).json({ message: "Erreur serveur", error: error.message });
   }
 });
 
-// POST /api/tasks -> crée une nouvelle tâche
+// POST /api/tasks -> crée une nouvelle tâche liée à l'utilisateur connecté
 router.post("/", async (req, res) => {
   try {
     const { title, description, status, priority } = req.body;
@@ -21,7 +25,13 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "Le titre est obligatoire" });
     }
 
-    const newTask = new Task({ title, description, status, priority });
+    const newTask = new Task({
+      title,
+      description,
+      status,
+      priority,
+      userId: req.userId,
+    });
     const savedTask = await newTask.save();
 
     res.status(201).json(savedTask);
@@ -30,14 +40,15 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PUT /api/tasks/:id -> modifie une tâche existante
+// PUT /api/tasks/:id -> modifie une tâche (uniquement si elle appartient à l'utilisateur)
 router.put("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const updatedTask = await Task.findByIdAndUpdate(id, req.body, {
-      new: true,
-      runValidators: true,
-    });
+    const updatedTask = await Task.findOneAndUpdate(
+      { _id: id, userId: req.userId },
+      req.body,
+      { new: true, runValidators: true }
+    );
 
     if (!updatedTask) {
       return res.status(404).json({ message: "Tâche introuvable" });
@@ -49,11 +60,11 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// DELETE /api/tasks/:id -> supprime une tâche
+// DELETE /api/tasks/:id -> supprime une tâche (uniquement si elle appartient à l'utilisateur)
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedTask = await Task.findByIdAndDelete(id);
+    const deletedTask = await Task.findOneAndDelete({ _id: id, userId: req.userId });
 
     if (!deletedTask) {
       return res.status(404).json({ message: "Tâche introuvable" });
