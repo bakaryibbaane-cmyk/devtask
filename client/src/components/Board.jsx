@@ -44,6 +44,11 @@ function Board() {
     setIsModalOpen(true);
   }
 
+async function handleStatusChange(id, newStatus) {
+  await updateTask(id, { status: newStatus });
+  loadTasks();
+}
+
   function handleAddNew() {
     setEditingTask(null);
     setIsModalOpen(true);
@@ -86,18 +91,21 @@ function Board() {
           tasks={tasks}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
         />
         <Column
           status="in_progress"
           tasks={tasks}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
         />
         <Column
           status="done"
           tasks={tasks}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
         />
       </div>
       <TaskModal

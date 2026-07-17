@@ -6,7 +6,7 @@ const statusLabels = {
   done: "Terminé",
 };
 
-function Column({ status, tasks, onEdit, onDelete }) {
+function Column({ status, tasks, onEdit, onDelete, onStatusChange }) {
   const filteredTasks = tasks.filter((task) => task.status === status);
 
   return (
@@ -24,6 +24,7 @@ function Column({ status, tasks, onEdit, onDelete }) {
             task={task}
             onEdit={onEdit}
             onDelete={onDelete}
+            onStatusChange={onStatusChange}
           />
         ))}
       </div>
