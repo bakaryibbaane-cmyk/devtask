@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { DragDropContext } from "@hello-pangea/dnd";
 import Column from "./Column";
 import TaskModal from "./TaskModal";
 import { getTasks, createTask, updateTask, deleteTask } from "../services/api";
@@ -12,15 +13,11 @@ function Board() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadTasks();
-  }, []);
+  useEffect(() => { loadTasks(); }, []);
 
   async function loadTasks() {
     const data = await getTasks();
-    if (Array.isArray(data)) {
-      setTasks(data);
-    }
+    if (Array.isArray(data)) setTasks(data);
   }
 
   async function handleSave(taskData) {
@@ -44,11 +41,6 @@ function Board() {
     setIsModalOpen(true);
   }
 
-async function handleStatusChange(id, newStatus) {
-  await updateTask(id, { status: newStatus });
-  loadTasks();
-}
-
   function handleAddNew() {
     setEditingTask(null);
     setIsModalOpen(true);
@@ -57,6 +49,19 @@ async function handleStatusChange(id, newStatus) {
   function handleLogout() {
     logout();
     navigate("/login");
+  }
+
+  async function handleStatusChange(id, newStatus) {
+    await updateTask(id, { status: newStatus });
+    loadTasks();
+  }
+
+  async function handleDragEnd(result) {
+    const { destination, draggableId } = result;
+    if (!destination) return;
+    const newStatus = destination.droppableId;
+    await updateTask(draggableId, { status: newStatus });
+    loadTasks();
   }
 
   return (
@@ -85,35 +90,18 @@ async function handleStatusChange(id, newStatus) {
           </button>
         </div>
       </div>
-      <div className="flex gap-6 overflow-x-auto">
-        <Column
-          status="todo"
-          tasks={tasks}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onStatusChange={handleStatusChange}
-        />
-        <Column
-          status="in_progress"
-          tasks={tasks}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onStatusChange={handleStatusChange}
-        />
-        <Column
-          status="done"
-          tasks={tasks}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onStatusChange={handleStatusChange}
-        />
-      </div>
+
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <div className="flex gap-6 overflow-x-auto">
+          <Column status="todo" tasks={tasks} onEdit={handleEdit} onDelete={handleDelete} onStatusChange={handleStatusChange} />
+          <Column status="in_progress" tasks={tasks} onEdit={handleEdit} onDelete={handleDelete} onStatusChange={handleStatusChange} />
+          <Column status="done" tasks={tasks} onEdit={handleEdit} onDelete={handleDelete} onStatusChange={handleStatusChange} />
+        </div>
+      </DragDropContext>
+
       <TaskModal
         isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false);
-          setEditingTask(null);
-        }}
+        onClose={() => { setIsModalOpen(false); setEditingTask(null); }}
         onSave={handleSave}
         initialData={editingTask}
       />

@@ -1,3 +1,4 @@
+import { Droppable } from "@hello-pangea/dnd";
 import TaskCard from "./TaskCard";
 
 const statusLabels = {
@@ -17,17 +18,29 @@ function Column({ status, tasks, onEdit, onDelete, onStatusChange }) {
           {filteredTasks.length}
         </span>
       </h2>
-      <div>
-        {filteredTasks.map((task) => (
-          <TaskCard
-            key={task._id}
-            task={task}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onStatusChange={onStatusChange}
-          />
-        ))}
-      </div>
+      <Droppable droppableId={status}>
+        {(provided, snapshot) => (
+          <div
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            className={`min-h-[100px] rounded-lg transition-colors ${
+              snapshot.isDraggingOver ? "bg-blue-50" : ""
+            }`}
+          >
+            {filteredTasks.map((task, index) => (
+              <TaskCard
+                key={task._id}
+                task={task}
+                index={index}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onStatusChange={onStatusChange}
+              />
+            ))}
+            {provided.placeholder}
+          </div>
+        )}
+      </Droppable>
     </div>
   );
 }
