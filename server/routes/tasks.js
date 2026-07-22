@@ -3,10 +3,9 @@ const router = express.Router();
 const Task = require("../models/Task");
 const authMiddleware = require("../middleware/auth");
 
-// Toutes les routes ci-dessous sont protégées par le middleware
 router.use(authMiddleware);
 
-// GET /api/tasks -> récupère uniquement les tâches de l'utilisateur connecté
+// GET /api/tasks
 router.get("/", async (req, res) => {
   try {
     const tasks = await Task.find({ userId: req.userId }).sort({ createdAt: -1 });
@@ -16,23 +15,18 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST /api/tasks -> crée une nouvelle tâche liée à l'utilisateur connecté
+// POST /api/tasks
 router.post("/", async (req, res) => {
   try {
     const { title, description, status, priority } = req.body;
+    if (!title) return res.status(400).json({ message: "Le titre est obligatoire" });
 
-    if (!title) {
-      return res.status(400).json({ message: "Le titre est obligatoire" });
-    }
-
-    const newTask = new Task({
-      title,
-      description,
-      status,
-      priority,
-      userId: req.userId,
-    });
+    const newTask = new Task({ title, description, status, priority, userId: req.userId });
     const savedTask = await newTask.save();
+
+    // Émettre l'événement à tous les clients connectés
+    const io = req.app.get("io");
+    io.emit("task:created", savedTask);
 
     res.status(201).json(savedTask);
   } catch (error) {
@@ -40,19 +34,19 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PUT /api/tasks/:id -> modifie une tâche (uniquement si elle appartient à l'utilisateur)
+// PUT /api/tasks/:id
 router.put("/:id", async (req, res) => {
   try {
-    const { id } = req.params;
     const updatedTask = await Task.findOneAndUpdate(
-      { _id: id, userId: req.userId },
+      { _id: req.params.id, userId: req.userId },
       req.body,
       { new: true, runValidators: true }
     );
+    if (!updatedTask) return res.status(404).json({ message: "Tâche introuvable" });
 
-    if (!updatedTask) {
-      return res.status(404).json({ message: "Tâche introuvable" });
-    }
+    // Émettre l'événement à tous les clients connectés
+    const io = req.app.get("io");
+    io.emit("task:updated", updatedTask);
 
     res.json(updatedTask);
   } catch (error) {
@@ -60,15 +54,15 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// DELETE /api/tasks/:id -> supprime une tâche (uniquement si elle appartient à l'utilisateur)
+// DELETE /api/tasks/:id
 router.delete("/:id", async (req, res) => {
   try {
-    const { id } = req.params;
-    const deletedTask = await Task.findOneAndDelete({ _id: id, userId: req.userId });
+    const deletedTask = await Task.findOneAndDelete({ _id: req.params.id, userId: req.userId });
+    if (!deletedTask) return res.status(404).json({ message: "Tâche introuvable" });
 
-    if (!deletedTask) {
-      return res.status(404).json({ message: "Tâche introuvable" });
-    }
+    // Émettre l'événement à tous les clients connectés
+    const io = req.app.get("io");
+    io.emit("task:deleted", req.params.id);
 
     res.json({ message: "Tâche supprimée", task: deletedTask });
   } catch (error) {
