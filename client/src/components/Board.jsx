@@ -5,6 +5,7 @@ import Column from "./Column";
 import TaskModal from "./TaskModal";
 import { getTasks, createTask, updateTask, deleteTask } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import socket from "../services/socket";
 
 function Board() {
   const [tasks, setTasks] = useState([]);
@@ -14,6 +15,18 @@ function Board() {
   const navigate = useNavigate();
 
   useEffect(() => { loadTasks(); }, []);
+
+  useEffect(() => {
+  socket.on("task:created", () => loadTasks());
+  socket.on("task:updated", () => loadTasks());
+  socket.on("task:deleted", () => loadTasks());
+
+  return () => {
+    socket.off("task:created");
+    socket.off("task:updated");
+    socket.off("task:deleted");
+  };
+  }, []);
 
   async function loadTasks() {
     const data = await getTasks();
